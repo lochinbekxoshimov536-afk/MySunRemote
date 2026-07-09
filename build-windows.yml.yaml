@@ -1,0 +1,111 @@
+name: Windows exe qurish (Qt6 + WebRTC)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+env:
+  WEBRTC_BRANCH: branch-heads/6478
+  QT_VERSION: "6.7.0"
+
+jobs:
+  build:
+    runs-on: windows-2022
+    timeout-minutes: 350
+
+    steps:
+      - name: Repo'ni checkout qilish
+        uses: actions/checkout@v4
+
+      - name: Qt6 o'rnatish
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          host: windows
+          target: desktop
+          arch: win64_msvc2019_64
+          modules: qtwebsockets
+
+      - name: Ninja va CMake o'rnatish
+        uses: seanmiddleditch/gha-setup-ninja@master
+
+      - name: MSVC muhitini sozlash
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: depot_tools klonlash
+        run: |
+          git clone --depth=1 https://chromium.googlesource.com/chromium/tools/depot_tools.git
+          echo "$PWD\depot_tools" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+        shell: pwsh
+
+      - name: WebRTC keshini tiklashga urinish
+        id: webrtc-cache
+        uses: actions/cache@v4
+        with:
+          path: webrtc
+          key: webrtc-${{ env.WEBRTC_BRANCH }}-win64-v1
+
+      - name: WebRTC fetch qilish
+        if: steps.webrtc-cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir webrtc
+          cd webrtc
+          fetch --nohooks webrtc
+        shell: pwsh
+
+      - name: To'g'ri branch'ga o'tish
+        if: steps.webrtc-cache.outputs.cache-hit != 'true'
+        working-directory: webrtc/src
+        run: |
+          git fetch origin ${{ env.WEBRTC_BRANCH }}
+          git checkout FETCH_HEAD
+          cd ..
+          gclient sync -D --with_branch_heads --with_tags
+        shell: pwsh
+
+      - name: WebRTC'ni konfiguratsiya qilish (gn gen)
+        working-directory: webrtc/src
+        run: |
+          gn gen out/Default --args='is_debug=false target_cpu="x64" is_clang=true rtc_include_tests=false rtc_build_examples=false rtc_build_tools=false use_rtti=true'
+        shell: pwsh
+
+      - name: WebRTC'ni build qilish (ninja)
+        working-directory: webrtc/src
+        run: ninja -C out/Default webrtc
+        shell: pwsh
+
+      - name: WEBRTC_ROOT muhit o'zgaruvchisini o'rnatish
+        run: |
+          $root = (Resolve-Path "webrtc/src").Path
+          echo "WEBRTC_ROOT=$root" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        shell: pwsh
+
+      - name: CMake konfiguratsiya
+        run: |
+          cmake -B build -G Ninja `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DWEBRTC_ROOT="${{ env.WEBRTC_ROOT }}" `
+            -DCMAKE_PREFIX_PATH="${{ env.Qt6_DIR }}"
+        shell: pwsh
+
+      - name: Loyihani build qilish
+        run: cmake --build build --config Release --parallel
+
+      - name: windeployqt bilan bog'liq DLL'larni joylashtirish
+        run: |
+          windeployqt build\MySunRemoteClient.exe --release --no-translations
+        shell: pwsh
+
+      - name: Artifact yuklash
+        uses: actions/upload-artifact@v4
+        with:
+          name: MySunRemoteClient-windows-x64
+          path: |
+            build/MySunRemoteClient.exe
+            build/*.dll
+            build/platforms/
+            build/styles/
+          if-no-files-found: error

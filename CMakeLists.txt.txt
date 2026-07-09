@@ -1,0 +1,6 @@
+MySunRemote/
+├── src/                ← clientsrc ni shu nomga o'zgartiring
+├── server/             ← server.py va requirements.txt ni shu papkaga soling
+├── .github/
+├── CMakeLists.txt      ← clientCMakeLists.txt.cmake ni shu nom bilan root'ga qo'ying
+└── README.md
