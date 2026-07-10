@@ -14,7 +14,7 @@ jobs:
     runs-on: windows-2022
     timeout-minutes: 350
     env:
-      DEPOT_TOOLS_WIN_TOOLCHAIN: 0   # ✅ Asosiy tuzatish – shu qator
+      DEPOT_TOOLS_WIN_TOOLCHAIN: 0
     steps:
       - name: Repo'ni checkout qilish
         uses: actions/checkout@v4
@@ -70,7 +70,7 @@ jobs:
       - name: WebRTC'ni konfiguratsiya qilish (gn gen)
         working-directory: webrtc/src
         run: |
-          gn gen out/Default --args='is_debug=false target_cpu="x64" is_clang=true rtc_include_tests=false rtc_build_examples=false rtc_build_tools=false use_rtti=true'
+          gn gen out/Default --args="is_debug=false target_cpu=\"x64\" is_clang=true rtc_include_tests=false rtc_build_examples=false rtc_build_tools=false use_rtti=true"
         shell: pwsh
 
       - name: WebRTC'ni build qilish (ninja)
