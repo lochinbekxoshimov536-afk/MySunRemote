@@ -13,7 +13,8 @@ jobs:
   build:
     runs-on: windows-2022
     timeout-minutes: 350
-
+    env:
+      DEPOT_TOOLS_WIN_TOOLCHAIN: 0   # ✅ Asosiy tuzatish – shu qator
     steps:
       - name: Repo'ni checkout qilish
         uses: actions/checkout@v4
@@ -85,14 +86,12 @@ jobs:
 
       - name: CMake konfiguratsiya
         run: |
-          cmake -B build -G Ninja `
-            -DCMAKE_BUILD_TYPE=Release `
-            -DWEBRTC_ROOT="${{ env.WEBRTC_ROOT }}" `
-            -DCMAKE_PREFIX_PATH="${{ env.Qt6_DIR }}"
+          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DWEBRTC_ROOT="${{ env.WEBRTC_ROOT }}" -DCMAKE_PREFIX_PATH="${{ env.Qt6_DIR }}"
         shell: pwsh
 
       - name: Loyihani build qilish
         run: cmake --build build --config Release --parallel
+        shell: pwsh
 
       - name: windeployqt bilan bog'liq DLL'larni joylashtirish
         run: |
